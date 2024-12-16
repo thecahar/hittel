@@ -18,6 +18,8 @@ def represent_students():
     for id_, student in students.items():
         print(f"[{id_}] {student['name']}, marks: {student['marks']}")
 
+
+
 def add_student(student: dict) -> dict | None:
     global LAST_ID_CONTEXT
 
@@ -53,12 +55,24 @@ def student_details(student: dict) -> None:
     print(f"Detailed info: [{student['name']}]...")
 
 def parse(data: str) -> tuple[str, list[int]]:
+    """Return student name and marks.
+
+    user input template:
+    'John Doe;4,5,4,5,4,5'
+
+
+    def foo(*args, **kwargs):
+        pass
+
+    """
+
     template = "John Doe;4,5,4,5,4,5"
 
     items = data.split(";")
 
     if len(items) != 2:
         raise Exception(f"Incorrect data. Template: {template}")
+
     name, raw_marks = items
 
     try:
@@ -71,6 +85,15 @@ def parse(data: str) -> tuple[str, list[int]]:
 
 
 def ask_student_payload():
+    """
+    Input template:
+        'John Doe;4,5,4,5,4,5'
+
+    Expected:
+        John Doe:       str
+        4,5,4,5,4,5:    list[int]
+    """
+
     prompt = "Enter student's payload using next template:\n'John Doe;4,5,4,5,4,5': "
 
     if not (payload := parse(input(prompt))):
@@ -138,6 +161,8 @@ def handle_management_command(command: str):
 
 
 def handle_user_input():
+    """This is an application entrypoint."""
+
     SYSTEM_COMMANDS = ("quit", "help")
     MANAGEMENT_COMMANDS = ("show", "add", "retrieve", "remove", "change")
     AVAILABLE_COMMANDS = SYSTEM_COMMANDS + MANAGEMENT_COMMANDS
