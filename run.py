@@ -1,27 +1,38 @@
-students = {
-    1: {
-        "name": "John Doe",
-        "marks": [4, 5, 1, 4, 5, 2, 5],
-        "info": "John is 22 y.o. Hobbies: music",
-    },
-    2: {
-        "name": "Marry Black",
-        "marks": [4, 1, 3, 4, 5, 1, 2, 2],
-        "info": "John is 23 y.o. Hobbies: football",
-    },
-}
+import json
+from pathlib import Path
+
+files_dir = Path(__name__).absolute().parent / "files"
+storage_file = "students.json"
+
 
 LAST_ID_CONTEXT = 2
 
 
+class StudentsStorage:
+    def __init__(self) -> None:
+        self.students = self.read_json(storage_file)
+
+    @staticmethod
+    def read_json(filename: str) -> dict:
+        with open(files_dir / filename) as file:
+            return json.load(file)
+
+    @staticmethod
+    def write_json(filename: str, data: dict) -> None:
+        with open(files_dir / filename, mode="w") as file:
+            return json.dump(data, file)
+
+    def flush(self) -> None:
+        self.write_json(storage_file, self.students)
+
+
 def represent_students():
-    for id_, student in students.items():
+    for id_, student in StudentsStorage().students.items():
         print(f"[{id_}] {student['name']}, marks: {student['marks']}")
-
-
 
 def add_student(student: dict) -> dict | None:
     global LAST_ID_CONTEXT
+    storage = StudentsStorage()
 
     if len(student) != 2:
         return None
@@ -29,30 +40,38 @@ def add_student(student: dict) -> dict | None:
         return None
     else:
         LAST_ID_CONTEXT += 1
-        students[LAST_ID_CONTEXT] = student
+        storage.students[str(LAST_ID_CONTEXT)] = student
 
+    storage.flush()
     return student
 
 
 def search_student(id_: int) -> dict | None:
-    return students.get(id_)
+    storage = StudentsStorage()
+    return storage.students.get(str(id_))
 
 
 def delete_student(id_: int):
+    storage = StudentsStorage()
+
     if search_student(id_):
-        del students[id_]
+        del storage.students[str(id_)]
         print(f"Student with id '{id_}' is deleted")
     else:
         print(f"There is student '{id_}' in the storage")
 
 
 def update_student(id_: int, payload: dict) -> dict:
-    students[id_] = payload
+    storage = StudentsStorage()
+    storage.students[str(id_)] = payload
+    storage.flush()
+
     return payload
 
 
 def student_details(student: dict) -> None:
     print(f"Detailed info: [{student['name']}]...")
+
 
 def parse(data: str) -> tuple[str, list[int]]:
     """Return student name and marks.
