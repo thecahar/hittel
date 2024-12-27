@@ -1,86 +1,111 @@
-from typing import NamedTuple, Any
+from typing import Any, Dict, Tuple, Callable
 
-CURRENCY_TO_CHF = {
-    "USD": 0.91,
-    "EUR": 1.08,
-    "CHF": 1.0
+EXCHANGE_RATES: Dict[Tuple[str, str], float] = {
+    ("USD", "CHF"): 0.91,
+    ("CHF", "USD"): 1.1,
+    ("EUR", "CHF"): 1.05,
+    ("CHF", "EUR"): 0.95,
+    ("USD", "EUR"): 0.85,
+    ("EUR", "USD"): 1.18,
 }
 
-CHF_TO_CURRENCY = {currency: 1 / rate for currency, rate in CURRENCY_TO_CHF.items()}
-
 class Price:
-    def __init__(self, value: float, currency: str):
-        if currency not in CURRENCY_TO_CHF:
-            raise ValueError(f"Unsupported currency: {currency}")
+    def __init__(self, value: int, currency: str) -> None:
+        self.value: int = value
+        self.currency: str = currency
 
-        self.value = value
-        self.currency = currency
+    def __str__(self) -> str:
+        return f"Price: {self.value} {self.currency}"
+
+    def convert(self, to: str) -> "Price":
+        if self.currency == to:
+            return self
+
+        rate = EXCHANGE_RATES.get((self.currency, to))
+        if rate is None:
+            raise ValueError(f"Conversion rate from {self.currency} to {to} not available.")
+
+        return Price(value=int(self.value * rate), currency=to)
 
     def __add__(self, other: Any) -> "Price":
         if not isinstance(other, Price):
-            raise TypeError("Can only add Price instances")
+            raise ValueError("Can perform operation only with Price objects.")
 
-        if self.currency == other.currency:
-            return Price(self.value + other.value, self.currency)
+        if self.currency != other.currency:
+            middle_currency = "CHF"
+            self_converted = self.convert(to=middle_currency)
+            other_converted = other.convert(to=middle_currency)
+            result = Price(
+                value=self_converted.value + other_converted.value, currency=middle_currency
+            ).convert(to=self.currency)
+        else:
+            result = Price(value=self.value + other.value, currency=self.currency)
 
-        converted_value = (self.to_chf().value + other.to_chf().value) * CHF_TO_CURRENCY[self.currency]
-        return Price(converted_value, self.currency)
+        return result
 
     def __sub__(self, other: Any) -> "Price":
         if not isinstance(other, Price):
-            raise TypeError("Can only subtract Price instances")
+            raise ValueError("Can perform operation only with Price objects.")
 
-        if self.currency == other.currency:
-            return Price(self.value - other.value, self.currency)
+        if self.currency != other.currency:
+            middle_currency = "CHF"
+            self_converted = self.convert(to=middle_currency)
+            other_converted = other.convert(to=middle_currency)
+            result = Price(
+                value=self_converted.value - other_converted.value, currency=middle_currency
+            ).convert(to=self.currency)
+        else:
+            result = Price(value=self.value - other.value, currency=self.currency)
 
-        converted_value = (self.to_chf().value - other.to_chf().value) * CHF_TO_CURRENCY[self.currency]
-        return Price(converted_value, self.currency)
-
-    def to_chf(self) -> "Price":
-        return Price(self.value * CURRENCY_TO_CHF[self.currency], "CHF")
-
-    def __repr__(self) -> str:
-        return f"Price({self.value:.2f}, \"{self.currency}\")"
-
-a = Price(100, "USD")
-b = Price(200, "EUR")
-
-print(a + b)
-print(a - b)
-
-from functools import wraps
+        return result
 
 users = {
-    "user1": "password1",
-    "admin": "admin123"
+    "admin": "password123",
+    "user": "userpass",
 }
 
-authenticated_users = set()
+auth_cache = {}
 
-def auth(func):
-    @wraps(func)
+def auth(func: Callable) -> Callable:
     def wrapper(*args, **kwargs):
-        global authenticated_users
-
-        username = input("Enter username: ")
-        if username in authenticated_users:
-            print("User already authenticated.")
-            return func(*args, **kwargs)
-
         while True:
+            username = input("Enter username: ")
             password = input("Enter password: ")
+
+            if username in auth_cache:
+                print("Authorization cached.")
+                break
+
             if users.get(username) == password:
-                print("Authentication successful.")
-                authenticated_users.add(username)
-                return func(*args, **kwargs)
+                print("Authorization successful.")
+                auth_cache[username] = True
+                break
             else:
-                print("Invalid credentials. Try again.")
-    
+                print("Invalid credentials. Please try again.")
+
+        return func(*args, **kwargs)
+
     return wrapper
 
 @auth
 def command():
-    print("Executing command...")
+    print("Executing secured command...")
+
+phone = Price(value=200, currency="USD")
+tablet = Price(value=400, currency="USD")
+watch = Price(value=300, currency="EUR")
+
+total = phone + tablet
+print(total)
+
+difference = tablet - phone
+print(difference)
+
+total_diff_currency = phone + watch
+print(total_diff_currency)
+
+difference_diff_currency = phone - watch
+print(difference_diff_currency)
 
 
 command()
